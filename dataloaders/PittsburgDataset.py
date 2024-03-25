@@ -88,7 +88,7 @@ def parse_dbStruct(path):
 
 
 class WholeDatasetFromStruct(data.Dataset):
-    def __init__(self, structFile, input_transform=None, onlyDB=False):
+    def __init__(self, structFile, input_transform=None, onlyDB=False, img_size = (480,640)):
         super().__init__()
 
         self.input_transform = input_transform
@@ -106,6 +106,7 @@ class WholeDatasetFromStruct(data.Dataset):
         self.distances = None
 
     def __getitem__(self, index):
+        # TODO: Implement depth and q,t Scene for Pitts
         img = Image.open(self.images[index])
 
         if self.input_transform:

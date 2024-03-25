@@ -17,7 +17,7 @@ if not path_obj.joinpath('train_val'):
     raise Exception(f'Please make sure the directory train_val from mapillary_sls dataset is situated in the directory {DATASET_ROOT}')
 
 class MSLS(Dataset):
-    def __init__(self, input_transform = None):
+    def __init__(self, input_transform = None, img_size = (480,640)):
         
         self.input_transform = input_transform
         

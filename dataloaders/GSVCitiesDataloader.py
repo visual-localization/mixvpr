@@ -128,7 +128,8 @@ class GSVCitiesDataModule(pl.LightningDataModule):
             img_per_place=self.img_per_place,
             min_img_per_place=self.min_img_per_place,
             random_sample_from_each_place=self.random_sample_from_each_place,
-            transform=self.train_transform)
+            transform=self.train_transform,
+            img_size = self.image_size)
 
     def train_dataloader(self):
         self.reload()

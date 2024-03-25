@@ -36,7 +36,7 @@ class VPRModel(pl.LightningModule):
         lr_mult=0.3,
         # ----- Loss
         loss_name="MultiSimilarityLoss",
-        miner_name="MultiSimilarityMiner",
+        miner_name="CustomMultiSimilarityMiner",
         miner_margin=0.1,
         faiss_gpu=False,
     ):
@@ -132,11 +132,15 @@ class VPRModel(pl.LightningModule):
         optimizer.step(closure=optimizer_closure)
 
     #  The loss function call (this method will be called at each training iteration)
-    def loss_function(self, descriptors, labels):
+    def loss_function(self, descriptors, scenes, labels):
         # we mine the pairs/triplets if there is an online mining strategy
         if self.miner is not None:
-            miner_outputs = self.miner(descriptors, labels)
-            loss = self.loss_fn(descriptors, labels, miner_outputs)
+            if(self.miner_name == "CustomMultiSimilarityMiner"):
+                miner_outputs = self.miner(descriptors,scenes)
+                loss = self.loss_fn(descriptors, indices_tuple = miner_outputs)
+            else:
+                miner_outputs = self.miner(descriptors, labels)
+                loss = self.loss_fn(descriptors, labels, miner_outputs)
 
             # calculate the % of trivial pairs/triplets
             # which do not contribute in the loss value
@@ -168,22 +172,25 @@ class VPRModel(pl.LightningModule):
 
     # This is the training step that's executed at each iteration
     def training_step(self, batch, batch_idx):
-        places, labels = batch
+        scenes, labels = batch
 
+        for k in scenes:
+            scenes[k] = scenes[k].flatten(0,1)
         # Note that GSVCities yields places (each containing N images)
         # which means the dataloader will return a batch containing BS places
-        BS, N, ch, h, w = places.shape
+        # BS, K, ch, h, w = scenes["image"].shape
 
         # reshape places and labels
-        images = places.view(BS * N, ch, h, w)
-        labels = labels.view(-1)
+        # images = places.view(BS * N, ch, h, w)
+        # labels = labels.view(-1)
+        images = scenes["image"]
 
         # Feed forward the batch to the model
         descriptors = self(
             images
         )  # Here we are calling the method forward that we defined above
         loss = self.loss_function(
-            descriptors, labels
+            descriptors, scenes ,labels
         )  # Call the loss_function we defined above
 
         self.log("loss", loss.item(), logger=True)
