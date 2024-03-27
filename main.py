@@ -132,11 +132,11 @@ class VPRModel(pl.LightningModule):
         optimizer.step(closure=optimizer_closure)
 
     #  The loss function call (this method will be called at each training iteration)
-    def loss_function(self, descriptors, scenes, labels):
+    def loss_function(self, descriptors,  labels=None, scenes=None):
         # we mine the pairs/triplets if there is an online mining strategy
         if self.miner is not None:
             if(self.miner_name == "CustomMultiSimilarityMiner"):
-                miner_outputs = self.miner(descriptors,scenes)
+                miner_outputs = self.miner(descriptors,scenes,labels)
                 loss = self.loss_fn(descriptors, indices_tuple = miner_outputs)
             else:
                 miner_outputs = self.miner(descriptors, labels)
@@ -190,7 +190,9 @@ class VPRModel(pl.LightningModule):
             images
         )  # Here we are calling the method forward that we defined above
         loss = self.loss_function(
-            descriptors, scenes ,labels
+            descriptors=descriptors, 
+            scenes=scenes, 
+            labels=labels
         )  # Call the loss_function we defined above
 
         self.log("loss", loss.item(), logger=True)
@@ -206,7 +208,7 @@ class VPRModel(pl.LightningModule):
     def validation_step(self, batch, batch_idx, dataloader_idx=None):
         places, _ = batch
         # calculate descriptors
-        descriptors = self(places)
+        descriptors = self(places["image"])
         return descriptors.detach().cpu()
 
     def validation_epoch_end(self, val_step_outputs):
@@ -274,7 +276,7 @@ if __name__ == "__main__":
         val_set_names=[
             "pitts30k_val",
             "pitts30k_test",
-            "msls_val",
+            #"msls_val",
         ],  # pitts30k_val, pitts30k_test, msls_val
     )
 

@@ -3,10 +3,14 @@
 import pandas as pd
 from pathlib import Path
 from PIL import Image
+import os
+
 import torch
 from torch.utils.data import Dataset
 import torchvision.transforms as T
 import numpy as np
+from scipy.spatial.transform import Rotation
+import utm
 
 from .Scene import Scene
 from .utils import read_depth_image,correct_intrinsic_scale
@@ -51,6 +55,9 @@ class GSVCitiesDataset(Dataset):
         # get all unique place ids
         self.places_ids = pd.unique(self.dataframe.index)
         self.total_nb_images = len(self.dataframe)
+        
+        # Setup intrinsics for cities
+        self.intrinsics = self.setup_intrinsics()
         
     def __getdataframes(self):
         ''' 
@@ -168,20 +175,40 @@ class GSVCitiesDataset(Dataset):
     
     @staticmethod
     def read_poses(name:str):
-        #TODO: Implement this shit
-        pass
+        name_split = name[:-4].split("_")
+        lat,lon = float(name_split[5],name_split[6])
+        northdeg = float(name_split[4])
+        
+        easting,northing,_,_ = utm.from_latlon(lat,lon)
+        trans = [easting,0,northing]
+        
+        rotation_vector = [0,northdeg,0]
+        rot = Rotation.from_euler('xyz',rotation_vector , degrees=True)
+        quat = rot.as_quat()
+        return torch.tensor(quat), torch.tensor(trans)
+        
     
-    @staticmethod
-    def read_intrinsics(img_name: str, img_size=None,width=0,height=0):
+    def read_intrinsics(self, img_name: str, img_size=None,width=0,height=0):
         """
         Read the intrinsics of a specific image, according to its name
         """
-        #TODO: change this shit
-        fx, fy, cx, cy, W, H = 744.375,744.375,width/2,height/2,width,height
+        city = img_name.split("_")[0]
+        intrinsic = self.intrinsics[city]
+        fx, fy, cx, cy, W, H = intrinsic[0],intrinsic[0],intrinsic[1],intrinsic[2],width,height
         K = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float32)
         if img_size is not None:
             K = correct_intrinsic_scale(K, img_size[0] / W, img_size[1] / H)
         return K,W,H
+    
+    @staticmethod
+    def setup_intrinsics():
+        intrinsics = {}
+        txt_path = os.path.join(BASE_PATH,"intrinsics.txt")
+        with open(txt_path,"r") as f:
+            for line in f.readlines():
+                line_split = line.strip().split(" ")
+                intrinsics[line_split[0]]=[float(val) for val in line_split[1:]]
+        return intrinsics
     
     def proccess_image_from_name(self,img_name:str,img_path:str)->Scene:
         # Load image

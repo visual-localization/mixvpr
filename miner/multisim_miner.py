@@ -15,12 +15,17 @@ class CustomMultiSimilarityMiner(BaseMiner):
         self.angle_threshold = angle_threshold
         self.add_to_recordable_attributes(name="epsilon", is_stat=False)
 
-    def mine(self, embeddings, labels, ref_emb=None, ref_labels=None):
-        if(ref_emb is None and ref_labels is None):
+    def mine(self, embeddings, scenes, labels, ref_emb=None, ref_scenes=None, ref_labels=None):
+        if(ref_emb is None and ref_labels is None and ref_scenes is None):
             ref_emb = embeddings
             ref_labels = labels
+            ref_scenes = scenes
         mat = self.distance(embeddings, ref_emb)
-        a1, p, a2, n = custom_get_all_pairs_indices(labels, ref_labels, self.frustum_overlap_threshold, self.angle_threshold)
+        a1, p, a2, n = custom_get_all_pairs_indices(
+            scenes=scenes, ref_scenes=ref_scenes, 
+            labels=labels, ref_labels = ref_labels,
+            frustum_overlap_threshold=self.frustum_overlap_threshold,
+            angle_threshold=self.angle_threshold)
 
         if len(a1) == 0 or len(a2) == 0:
             empty = torch.tensor([], device=embeddings.device, dtype=torch.long)

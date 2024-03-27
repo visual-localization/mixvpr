@@ -108,13 +108,13 @@ class GSVCitiesDataModule(pl.LightningDataModule):
             for valid_set_name in self.val_set_names:
                 if valid_set_name.lower() == 'pitts30k_test':
                     self.val_datasets.append(PittsburgDataset.get_whole_test_set(
-                        input_transform=self.valid_transform))
+                        input_transform=self.valid_transform,img_size = self.image_size))
                 elif valid_set_name.lower() == 'pitts30k_val':
                     self.val_datasets.append(PittsburgDataset.get_whole_val_set(
-                        input_transform=self.valid_transform))
+                        input_transform=self.valid_transform,img_size = self.image_size))
                 elif valid_set_name.lower() == 'msls_val':
                     self.val_datasets.append(MapillaryDataset.MSLS(
-                        input_transform=self.valid_transform))
+                        input_transform=self.valid_transform,img_size = self.image_size))
                 else:
                     print(
                         f'Validation set {valid_set_name} does not exist or has not been implemented yet')
