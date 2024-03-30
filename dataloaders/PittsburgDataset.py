@@ -1,6 +1,7 @@
 from os.path import join, exists
 from collections import namedtuple
 from scipy.io import loadmat
+import os
 
 import torchvision.transforms as T
 import torch.utils.data as data
@@ -86,7 +87,17 @@ def parse_dbStruct(path):
                     utmQ, numDb, numQ, posDistThr,
                     posDistSqThr, nonTrivPosDistSqThr)
 
-
+def join_db_img(root_dir,dbIm):
+    [folder,name] = dbIm.split("/")
+    
+    img_parts = name[:-4].split("_")
+    split_info = int(img_parts[0])-int(folder)*1000
+    
+    new_index = int(split_info/250)
+    new_folder = f"00{new_index}"
+    new_path = os.path.join(root_dir,str(folder),new_folder,name)
+    return new_path
+    
 class WholeDatasetFromStruct(data.Dataset):
     def __init__(self, structFile, input_transform=None, onlyDB=False, img_size = (480,640)):
         super().__init__()
@@ -94,7 +105,7 @@ class WholeDatasetFromStruct(data.Dataset):
         self.input_transform = input_transform
 
         self.dbStruct = parse_dbStruct(structFile)
-        self.images = [join(root_dir, dbIm) for dbIm in self.dbStruct.dbImage]
+        self.images = [join_db_img(root_dir, dbIm) for dbIm in self.dbStruct.dbImage]
         if not onlyDB:
             self.images += [join(queries_dir, qIm)
                             for qIm in self.dbStruct.qImage]
