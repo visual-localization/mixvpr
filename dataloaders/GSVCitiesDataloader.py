@@ -151,7 +151,7 @@ class GSVCitiesDataModule(pl.LightningDataModule):
         table.header = False
         table.add_row(["# of cities", f"{len(TRAIN_CITIES)}"])
         table.add_row(["# of places", f'{self.train_dataset.__len__()}'])
-        table.add_row(["# of images", f'{self.train_dataset.total_nb_images}'])
+        # table.add_row(["# of images", f'{self.train_dataset.total_nb_images}'])
         print(table.get_string(title="Training Dataset"))
         print()
 
