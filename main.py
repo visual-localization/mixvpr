@@ -132,12 +132,12 @@ class VPRModel(pl.LightningModule):
         optimizer.step(closure=optimizer_closure)
 
     #  The loss function call (this method will be called at each training iteration)
-    def loss_function(self, descriptors,  labels=None, scenes=None):
+    def loss_function(self, descriptors, labels=None, scenes=None):
         # we mine the pairs/triplets if there is an online mining strategy
         if self.miner is not None:
-            if(self.miner_name == "CustomMultiSimilarityMiner"):
-                miner_outputs = self.miner(descriptors,scenes,labels)
-                loss = self.loss_fn(descriptors, indices_tuple = miner_outputs)
+            if self.miner_name == "CustomMultiSimilarityMiner":
+                miner_outputs = self.miner(descriptors, scenes, labels)
+                loss = self.loss_fn(descriptors, indices_tuple=miner_outputs)
             else:
                 miner_outputs = self.miner(descriptors, labels)
                 loss = self.loss_fn(descriptors, labels, miner_outputs)
@@ -175,7 +175,7 @@ class VPRModel(pl.LightningModule):
         scenes, labels = batch
 
         for k in scenes:
-            scenes[k] = scenes[k].flatten(0,1)
+            scenes[k] = scenes[k].flatten(0, 1)
         # Note that GSVCities yields places (each containing N images)
         # which means the dataloader will return a batch containing BS places
         # BS, K, ch, h, w = scenes["image"].shape
@@ -190,9 +190,7 @@ class VPRModel(pl.LightningModule):
             images
         )  # Here we are calling the method forward that we defined above
         loss = self.loss_function(
-            descriptors=descriptors, 
-            scenes=scenes, 
-            labels=labels
+            descriptors=descriptors, scenes=scenes, labels=labels
         )  # Call the loss_function we defined above
 
         self.log("loss", loss.item(), logger=True)
@@ -261,7 +259,7 @@ class VPRModel(pl.LightningModule):
         print("\n\n")
 
 
-if __name__ == "__main__":
+def main():
     pl.utilities.seed.seed_everything(seed=190223, workers=True)
 
     datamodule = GSVCitiesDataModule(
@@ -276,7 +274,7 @@ if __name__ == "__main__":
         val_set_names=[
             "pitts30k_val",
             "pitts30k_test",
-            #"msls_val",
+            # "msls_val",
         ],  # pitts30k_val, pitts30k_test, msls_val
     )
 
@@ -359,3 +357,7 @@ if __name__ == "__main__":
 
     # we call the trainer, we give it the model and the datamodule
     trainer.fit(model=model, datamodule=datamodule)
+
+
+if __name__ == "__main__":
+    main()
