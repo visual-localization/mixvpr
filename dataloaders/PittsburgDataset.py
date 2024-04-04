@@ -14,24 +14,28 @@ def get_input_transform(image_size=None):
     )
 
 
-def get_whole_val_set(input_transform):
+def get_whole_val_set(input_transform, img_size=(480, 640)):
     return WholeDatasetFromStruct(
-        "pitts30k", "validation", input_transform=input_transform
+        "pitts30k", "validation", input_transform=input_transform, img_size=img_size
     )
 
 
-def get_250k_val_set(input_transform):
+def get_250k_val_set(input_transform, img_size=(480, 640)):
     return WholeDatasetFromStruct(
-        "pitts250k", "validation", input_transform=input_transform
+        "pitts250k", "validation", input_transform=input_transform, img_size=img_size
     )
 
 
-def get_whole_test_set(input_transform):
-    return WholeDatasetFromStruct("pitts30k", "test", input_transform=input_transform)
+def get_whole_test_set(input_transform, img_size=(480, 640)):
+    return WholeDatasetFromStruct(
+        "pitts30k", "test", input_transform=input_transform, img_size=img_size
+    )
 
 
 def get_250k_test_set(input_transform):
-    return WholeDatasetFromStruct("pitts250k", "test", input_transform=input_transform)
+    return WholeDatasetFromStruct(
+        "pitts250k", "test", input_transform=input_transform, img_size=(480, 640)
+    )
 
 
 # TODO: add onlyDb back as params
