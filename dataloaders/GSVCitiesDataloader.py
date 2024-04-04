@@ -125,9 +125,9 @@ class GSVCitiesDataModule(pl.LightningDataModule):
     def reload(self):
         self.train_dataset = GSVCitiesDataset(
             cities=self.cities,
-            img_per_place=self.img_per_place,
+            # img_per_place=self.img_per_place,
             min_img_per_place=self.min_img_per_place,
-            random_sample_from_each_place=self.random_sample_from_each_place,
+            # random_sample_from_each_place=self.random_sample_from_each_place,
             transform=self.train_transform,
             img_size = self.image_size)
 
