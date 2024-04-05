@@ -57,8 +57,8 @@ def entry():
     test_item = dataset[0]
     print(test_item)
     
-    print(test_item["image"].shape)
-    print(test_item["depth"].shape)
-    print(test_item["intrinsics_matrix"].shape)
-    print(test_item["rotation"].shape)
-    print(test_item["translation"].shape)
+    print(test_item[0]["image"].shape)
+    print(test_item[0]["depth"].shape)
+    print(test_item[0]["intrinsics_matrix"].shape)
+    print(test_item[0]["rotation"].shape)
+    print(test_item[0]["translation"].shape)

@@ -174,7 +174,7 @@ class GSVCitiesDataset(Dataset):
     @staticmethod
     def read_poses(name:str):
         name_split = name[:-4].split("_")
-        lat,lon = float(name_split[5],name_split[6])
+        lat,lon = float(name_split[5]),float(name_split[6])
         northdeg = float(name_split[4])
         
         easting,northing,_,_ = utm.from_latlon(lat,lon)
@@ -196,6 +196,7 @@ class GSVCitiesDataset(Dataset):
         K = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float32)
         if img_size is not None:
             K = correct_intrinsic_scale(K, img_size[0] / W, img_size[1] / H)
+        K=torch.tensor(K)
         return K,W,H
     
     def setup_intrinsics(self):
