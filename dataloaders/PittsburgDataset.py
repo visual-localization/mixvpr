@@ -10,14 +10,14 @@ import torch.utils.data as data
 from PIL import Image
 from sklearn.neighbors import NearestNeighbors
 
-root_dir = '/pitts250k'
+# root_dir = '/pitts250k'
 
-if not exists(root_dir):
-    raise FileNotFoundError(
-        'root_dir is hardcoded, please adjust to point to Pittsburgh dataset')
+# if not exists(root_dir):
+#     raise FileNotFoundError(
+#         'root_dir is hardcoded, please adjust to point to Pittsburgh dataset')
 
-struct_dir = join(root_dir, 'datasets')
-queries_dir = f"{root_dir}_queries_real"
+# struct_dir = join(root_dir, 'datasets')
+# queries_dir = f"{root_dir}_queries_real"
 
 
 def input_transform(image_size=None):

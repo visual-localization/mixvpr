@@ -5,24 +5,37 @@ import os
 
 from const import PITTS,GSV
 
-stub = Stub("gsv_loader")
+
 
 def lookup_volume(data_dict:Dict[str,str]):
     return dict((k, Volume.lookup(v)) for k, v in data_dict.items())
+    
+stub = Stub(
+    name="Im trying my best :((("
+)
 
 image = (
     Image.debian_slim(python_version="3.10")
-    .apt_install("git")
-    .run_commands("git clone --single-branch --branch remote-volume https://github.com/visual-localization/mixvpr.git && cd mixvpr")
-    .run_commands("pip install -r requirements.txt")
+    .apt_install(["ffmpeg","libsm6","libxext6"])
+    .pip_install_from_requirements("./requirements.txt")
 )
 
-with image.imports():
-    from dataloaders.GSVCitiesDataset import GSVCitiesDataset
-    import torchvision.transforms as T
 
-@stub.function(volumes=lookup_volume({**GSV}),image=image)
-def run():
+@stub.function(
+    image=image,
+    mounts=[Mount.from_local_dir("./", remote_path="/root/mixvpr")],
+    volumes=lookup_volume({**GSV})
+)
+def entry():
+    import sys
+    sys.path.append("/root/mixvpr")
+    
+    import os
+    print(os.getcwd())
+    print(os.listdir(os.getcwd()))
+    
+    import torchvision.transforms as T
+    from dataloaders.GSVCitiesDataset import GSVCitiesDataset
     image_size = (480,640)
     
     IMAGENET_MEAN_STD = {'mean': [0.485, 0.456, 0.406], 

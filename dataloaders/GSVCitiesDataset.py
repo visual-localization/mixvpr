@@ -112,7 +112,7 @@ class GSVCitiesDataset(Dataset):
         scenes = []
         for i, row in place.iterrows():
             img_name = self.get_img_name(row)
-            img_path = os.path.join(f"{self.base_path}_Images_{row["city_id"]}",img_name)
+            img_path = os.path.join(f"{self.base_path}_Images_{row['city_id']}",img_name)
             scene = self.proccess_image_from_name(img_name,img_path)
             scenes.append(scene)
 
@@ -169,7 +169,7 @@ class GSVCitiesDataset(Dataset):
     
     @staticmethod
     def generate_depth_path(base_path:str,img_path:str):
-        return img_path.replace("Images","Depths")
+        return img_path.replace("Images","Depths").replace(".jpg",".png")
     
     @staticmethod
     def read_poses(name:str):
@@ -216,6 +216,7 @@ class GSVCitiesDataset(Dataset):
         
         # Load depth
         depth_path = self.generate_depth_path(self.base_path,img_path)
+        print(depth_path)
         depth = read_depth_image(depth_path,self.img_size)
         
         # Load poses from name
