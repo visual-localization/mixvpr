@@ -21,7 +21,7 @@ default_transform = T.Compose([
 ])
 
 # NOTE: Hard coded path to dataset folder 
-BASE_PATH = '../datasets/gsv_cities/'
+BASE_PATH = '/gsv_cities'
 
 if not Path(BASE_PATH).exists():
     raise FileNotFoundError(
@@ -67,16 +67,15 @@ class GSVCitiesDataset(Dataset):
             This requieres DataFrame files to be in a folder
             named Dataframes, containing a DataFrame
             for each city in self.cities
-        '''
+        ''',
         # read the first city dataframe
-        df = pd.read_csv(self.base_path+'Dataframes/'+f'{self.cities[0]}.csv')
+        df = pd.read_csv(os.path.join(self.base_path,"Dataframes",f'{self.cities[0]}.csv'))
         df = df.sample(frac=1)  # shuffle the city dataframe
         
 
         # append other cities one by one
         for i in range(1, len(self.cities)):
-            tmp_df = pd.read_csv(
-                self.base_path+'Dataframes/'+f'{self.cities[i]}.csv')
+            tmp_df = pd.read_csv(os.path.join(self.base_path,"Dataframes",f'{self.cities[i]}.csv'))
 
             # Now we add a prefix to place_id, so that we
             # don't confuse, say, place number 13 of NewYork
@@ -113,8 +112,7 @@ class GSVCitiesDataset(Dataset):
         scenes = []
         for i, row in place.iterrows():
             img_name = self.get_img_name(row)
-            img_path = self.base_path + 'Images/' + \
-                row['city_id'] + '/' + img_name
+            img_path = os.path.join(f"{self.base_path}_Images_{row["city_id"]}",img_name)
             scene = self.proccess_image_from_name(img_name,img_path)
             scenes.append(scene)
 
@@ -200,10 +198,9 @@ class GSVCitiesDataset(Dataset):
             K = correct_intrinsic_scale(K, img_size[0] / W, img_size[1] / H)
         return K,W,H
     
-    @staticmethod
-    def setup_intrinsics():
+    def setup_intrinsics(self):
         intrinsics = {}
-        txt_path = os.path.join(BASE_PATH,"intrinsics.txt")
+        txt_path = os.path.join(self.base_path,"intrinsics.txt")
         with open(txt_path,"r") as f:
             for line in f.readlines():
                 line_split = line.strip().split(" ")

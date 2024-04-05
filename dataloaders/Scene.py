@@ -35,6 +35,8 @@ class Scene:
     intrinsics_matrix: torch.tensor #(3,3)
     rotation: torch.tensor #[4]: q1,q2,q3,q4
     translation: torch.tensor # [3]: x,y,z: should be the absolute pose of the image
+    
+    @staticmethod
     def create_dict(
         image:torch.tensor, # (h, w, 3) in cpu
         depth:torch.tensor,
