@@ -19,3 +19,4 @@ tqdm==4.64.1
 utm==0.7.0
 opencv-python>=4.1.2.30
 transforms3d==0.4.1
+lightning_lite==1.8.6

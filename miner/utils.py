@@ -33,11 +33,7 @@ def custom_get_matches_and_diffs(scenes, labels, ref_scenes=None, ref_labels=Non
     ind = torch.triu_indices(frustum_diff.size(dim=0), frustum_diff.size(dim=0), 1).to(device=device)
     frustum_diff[ind[0],ind[1]] = frustum_diff[ind[0],ind[1]] + frustum_diff[ind[1],ind[0]]
     frustum_diff[ind[1],ind[0]] = frustum_diff[ind[0],ind[1]]
-    matches = torch.tensor((frustum_diff >= frustum_overlap_threshold) & (angle_diff <= angle_threshold) & zone_diff).byte()
-    print(f"Frustum Valid Sample: {torch.sum(frustum_diff >= frustum_overlap_threshold)}")
-    print(f"Angle Valid Sample: {torch.sum(angle_diff <= angle_threshold)}")
-    print(f"Label Valid Sample: {torch.sum(zone_diff)}")
-    print(f"Overall Valid Sample: {torch.sum(matches)}")
+    matches = ((frustum_diff >= frustum_overlap_threshold) & (angle_diff <= angle_threshold) & zone_diff).byte()
     diffs = matches ^ 1
     if ref_scenes is scenes:
         matches.fill_diagonal_(0)
