@@ -10,17 +10,17 @@ import torch.utils.data as data
 from PIL import Image
 from sklearn.neighbors import NearestNeighbors
 
-# root_dir = '/pitts250k'
+root_dir = '/pitts250k'
 
-# if not exists(root_dir):
-#     raise FileNotFoundError(
-#         'root_dir is hardcoded, please adjust to point to Pittsburgh dataset')
+if not exists(root_dir):
+    raise FileNotFoundError(
+        'root_dir is hardcoded, please adjust to point to Pittsburgh dataset')
 
-# struct_dir = join(root_dir, 'datasets')
-# queries_dir = f"{root_dir}_queries_real"
+struct_dir = join(root_dir, 'datasets')
+queries_dir = f"{root_dir}_queries_real"
 
 
-def input_transform(image_size=None):
+def default_input_transform(image_size=None):
     return T.Compose([
         T.Resize(image_size),# interpolation=T.InterpolationMode.BICUBIC),
         T.ToTensor(),
@@ -29,30 +29,49 @@ def input_transform(image_size=None):
 
 
 
-def get_whole_val_set(input_transform):
+def get_whole_val_set(input_transform,img_size):
     structFile = join(struct_dir, 'pitts30k_val.mat')
-    return WholeDatasetFromStruct(structFile, input_transform=input_transform)
+    return WholeDatasetFromStruct(
+        structFile,
+        input_transform=input_transform,
+        img_size=img_size
+    )
 
 
-def get_250k_val_set(input_transform):
+def get_250k_val_set(input_transform,img_size):
     structFile = join(struct_dir, 'pitts250k_val.mat')
-    return WholeDatasetFromStruct(structFile, input_transform=input_transform)
+    return WholeDatasetFromStruct(
+        structFile,
+        input_transform=input_transform,
+        img_size=img_size
+    )
 
 
-def get_whole_test_set(input_transform):
+def get_whole_test_set(input_transform,img_size):
     structFile = join(struct_dir, 'pitts30k_test.mat')
-    return WholeDatasetFromStruct(structFile, input_transform=input_transform)
+    return WholeDatasetFromStruct(
+        structFile,
+        input_transform=input_transform,
+        img_size=img_size
+    )
 
 
-def get_250k_test_set(input_transform):
+def get_250k_test_set(input_transform,img_size):
     structFile = join(struct_dir, 'pitts250k_test.mat')
-    return WholeDatasetFromStruct(structFile, input_transform=input_transform)
+    return WholeDatasetFromStruct(
+        structFile,
+        input_transform=input_transform,
+        img_size=img_size
+    )
 
-def get_whole_training_set(onlyDB=False):
+def get_whole_training_set(input_transform,img_size,onlyDB=False):
     structFile = join(struct_dir, 'pitts30k_train.mat')
-    return WholeDatasetFromStruct(structFile,
-                                  input_transform=input_transform(),
-                                  onlyDB=onlyDB)
+    return WholeDatasetFromStruct(
+        structFile,
+        input_transform=input_transform,
+        onlyDB=onlyDB,
+        img_size=img_size
+    )
 
 dbStruct = namedtuple('dbStruct', ['whichSet', 'dataset',
                                    'dbImage', 'utmDb', 'qImage', 'utmQ', 'numDb', 'numQ',
@@ -101,8 +120,9 @@ def join_db_img(root_dir,dbIm):
 class WholeDatasetFromStruct(data.Dataset):
     def __init__(self, structFile, input_transform=None, onlyDB=False, img_size = (480,640)):
         super().__init__()
-
-        self.input_transform = input_transform(img_size)
+        self.input_transform = input_transform
+        if(self.input_transform is None):
+            self.input_transform = default_input_transform(img_size)
 
         self.dbStruct = parse_dbStruct(structFile)
         self.images = [join_db_img(root_dir, dbIm) for dbIm in self.dbStruct.dbImage]
@@ -122,7 +142,7 @@ class WholeDatasetFromStruct(data.Dataset):
         if self.input_transform:
             img = self.input_transform(img)
 
-        return img, index
+        return {"image":img}, index
 
     def __len__(self):
         return len(self.images)

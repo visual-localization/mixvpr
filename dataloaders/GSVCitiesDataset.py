@@ -23,9 +23,9 @@ default_transform = T.Compose([
 # NOTE: Hard coded path to dataset folder 
 BASE_PATH = '/gsv_cities'
 
-if not Path(BASE_PATH).exists():
-    raise FileNotFoundError(
-        'BASE_PATH is hardcoded, please adjust to point to gsv_cities')
+# if not Path(BASE_PATH).exists():
+#     raise FileNotFoundError(
+#         'BASE_PATH is hardcoded, please adjust to point to gsv_cities')
 
 class GSVCitiesDataset(Dataset):
     def __init__(self,
@@ -217,7 +217,6 @@ class GSVCitiesDataset(Dataset):
         
         # Load depth
         depth_path = self.generate_depth_path(self.base_path,img_path)
-        print(depth_path)
         depth = read_depth_image(depth_path,self.img_size)
         
         # Load poses from name

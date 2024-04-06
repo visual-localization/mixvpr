@@ -5,9 +5,10 @@ from pytorch_metric_learning.distances import CosineSimilarity
 from pytorch_metric_learning.utils import common_functions as c_f
 
 from .utils import custom_get_all_pairs_indices
+from .custom_base_miner import CustomBaseMiner
 from const import FRUSTUM_THRESHOLD, ANGLE_THRESHOLD
 
-class CustomMultiSimilarityMiner(BaseMiner):
+class CustomMultiSimilarityMiner(CustomBaseMiner):
     def __init__(self, epsilon=0.1, frustum_overlap_threshold=FRUSTUM_THRESHOLD, angle_threshold=ANGLE_THRESHOLD, **kwargs):
         super().__init__(**kwargs)
         self.epsilon = epsilon
@@ -16,13 +17,12 @@ class CustomMultiSimilarityMiner(BaseMiner):
         self.add_to_recordable_attributes(name="epsilon", is_stat=False)
 
     def mine(self, embeddings, scenes, labels, ref_emb=None, ref_scenes=None, ref_labels=None):
-        if(ref_emb is None and ref_labels is None and ref_scenes is None):
+        if(ref_emb is None and ref_labels is None):
             ref_emb = embeddings
             ref_labels = labels
-            ref_scenes = scenes
         mat = self.distance(embeddings, ref_emb)
         a1, p, a2, n = custom_get_all_pairs_indices(
-            scenes=scenes, ref_scenes=ref_scenes, 
+            scenes=scenes, 
             labels=labels, ref_labels = ref_labels,
             frustum_overlap_threshold=self.frustum_overlap_threshold,
             angle_threshold=self.angle_threshold)

@@ -1,133 +1,63 @@
-import numpy as np
 import torch
-from transforms3d.quaternions import quat2mat
 
 from typing import Tuple
+device='cuda' if torch.cuda.is_available() else 'cpu'
+def frustum_difference(origin_img,target_img)->float:
+    
+    intrinsics_matrix = origin_img["intrinsics_matrix"].double()
+    inv_intrinsics = torch.inverse(intrinsics_matrix)
+    
+    depth = origin_img["depth"].double()
+    height = depth.shape[0]
+    width  = depth.shape[1]
+    
+    interval = 10
+    height_grid = torch.arange(0,height,interval,dtype=torch.long).to(device=device)
+    width_grid  = torch.arange(0,width,interval,dtype=torch.long).to(device=device)
+    grid = torch.cartesian_prod(width_grid, height_grid) 
 
+    depth_grid = depth[grid[:,1],grid[:,0]]
 
-class FrustumDifferennce:
-    @staticmethod
-    def get_frustum_difference(origin_img,target_img)->float:
-        height = origin_img["image"].shape[1]
-        width = origin_img["image"].shape[2]
-        point_map,depth_list = FrustumDifferennce.sample_point(
-            origin_height = height,
-            origin_width = width,
-            origin_depth = origin_img["depth"]
-        )
-        
-        # Generate 3D points relative to the origin camera coordinate system
-        origin_points = FrustumDifferennce.backproject_3d(point_map,depth_list,origin_img["intrinsics_matrix"])
-        
-        # Project 3D points to world coordinate system
-        points_world = FrustumDifferennce.proj_to_world_coord(
-            origin_points = origin_points,
-            origin_rotation = origin_img["rotation"],
-            origin_translation = origin_img["translation"]
-        )
-        
-        points_target_2D = FrustumDifferennce.proj_to_target(
-            world_points=points_world,
-            target_translation=target_img["translation"],
-            target_rotation=target_img["rotation"],
-            target_intrinsics=target_img["intrinsics_matrix"]
-        )
-        
-        filter = []
-        for point in points_target_2D:
-            filter.append(point[0]>0 and point[0]<width and point[1]>0 and point[1]<height)
-        
-        return point_map[filter].shape[0]/len(filter)
-        
-    
-    @staticmethod
-    def sample_point(origin_height:float, origin_width:float, origin_depth:torch.tensor, interval:int=10)->Tuple[np.ndarray, np.ndarray]:
-        '''
-        Sampling from the origin image and assign depth value to each sampled pixel
-        :param origin_height: float
-        :param origin_width: float
-        :param origin_depth: np.ndarray (H,W)
-        :return: xyz: array [N,3]
-        '''
-        point_map = []
-        depth_list = []
-        for y in range(0,int(origin_height),interval):
-            for x in range(0,int(origin_width),interval):
-                if origin_depth[y][x]!=0 and origin_depth[y][x]!=65535:
-                    point_map.append([x,y])
-                    depth_list.append(origin_depth[y][x].item())
-        point_map = np.array(point_map)
-        depth_list = np.array(depth_list)
-        return point_map,depth_list
-    
-    @staticmethod
-    def backproject_3d(point_map:np.ndarray, depth_list:np.ndarray, K:np.ndarray)->np.ndarray:
-        '''
-        Backprojects 2d points given by uv coordinates into 3D using their depth values and intrinsic K
-        :param point_map: array [N,2]
-        :param depth_list: array [N]
-        :param K: array [3,3]
-        :return: xyz: array [N,3]
-        '''
-        point_map_1 = np.concatenate([point_map, np.ones((point_map.shape[0], 1))], axis=1)
-        points3D = depth_list.reshape(-1, 1) * (np.linalg.inv(K) @ point_map_1.T).T
-        return points3D
-    
-    @staticmethod
-    def proj_to_world_coord(origin_points:np.ndarray, origin_rotation:np.ndarray, origin_translation:np.ndarray)->np.ndarray:
-        '''
-        Project 3D points sampled from origin image to world coordinate system
-        :param origin_points: array [N,3]
-        :param origin_rotation: array [4]
-        :param origin_translation: array [3]
-        :return: abs_point: array [N,3]
-        '''
-        # mat1 = quat2mat(origin_rotation)
-        # abs_cam_origin = rotate_vector(-origin_translation, qinverse(origin_rotation))
-        # abs_point = (mat1.T@origin_points.T).T+abs_cam_origin
-        # return abs_point
-        mat1 = quat2mat(origin_rotation)
-        abs_point = (mat1@origin_points.T).T + origin_translation
-        return abs_point
-    
-    @staticmethod
-    def proj_to_target(
-        world_points:np.ndarray,
-        target_translation: np.ndarray,
-        target_rotation: np.ndarray,
-        target_intrinsics: np.ndarray
-    )->np.ndarray:
-        '''
-        Project 3D points in world coordinate to target camera 2D coordinate system
-        :param world_points: array [N,3]
-        :param target_translation: array [4]
-        :param target_rotation: array [3]
-        :param target_intrinsics: array [3,3]
-        :return: target_points: array [N,2]
-        '''
-        # mat2 = quat2mat(target_rotation) 
-        # abs_cam_target = rotate_vector(-target_translation, qinverse(target_rotation))
-        # point_in_query = mat2@(world_points-abs_cam_target).T
-        # point_in_query = target_intrinsics@point_in_query
-        # temp = point_in_query.T
-        # target_points = temp/temp[:,2].reshape(-1, 1)
-        # return target_points[:,:2]
-        mat2 = quat2mat(target_rotation) 
-        point_in_query = mat2.T@(world_points-target_translation).T
-        point_in_query = target_intrinsics@point_in_query
-        temp = point_in_query.T
-        target_points = temp/temp[:,2].reshape(-1, 1)
-        return target_points[:,:2]
+    grid_cam = torch.cat([grid,torch.ones(grid.shape[0]).reshape(-1,1).to(device=device)],1).double()
+    rev_intrinsics_grid = inv_intrinsics @ torch.transpose(grid_cam,0,1)
+    camera_coord_grid = torch.transpose(rev_intrinsics_grid,0,1) * depth_grid.reshape(-1,1)
 
-class AngleDifference:
-    @staticmethod
-    def relative_q(q1:np.ndarray, q2:np.ndarray)->float:
-        '''
-        The difference in angle(degree) between two camera rotation
-        :param q1: array [4]
-        :param q2: array [4]
-        :return: target_points: array [N,2]
-        '''
-        mat1 = quat2mat(q1)
-        mat2 = quat2mat(q2)
-        return np.arccos((np.trace(mat1.T@mat2)-1)/2)*(180/np.pi)
+    mat1 = quat2mat_custom(origin_img["rotation"]).double()
+    trans1 = origin_img["translation"].double()
+
+    abs_point = torch.transpose(mat1@torch.transpose(camera_coord_grid,0,1),0,1) + trans1
+
+    mat2 = quat2mat_custom(target_img["rotation"]).double()
+    trans2 = target_img["translation"].double()
+    cam2_intrinsics = target_img["intrinsics_matrix"].double()
+
+    point_in_query = torch.inverse(mat2) @ torch.transpose(abs_point-trans2,0,1)
+    point_in_query_2 = cam2_intrinsics@point_in_query
+
+    temp = torch.transpose(point_in_query_2,0,1)
+    target_points = temp/temp[:,2].reshape(-1,1)
+
+    return torch.sum((target_points[:,0]>0) & (target_points[:,1]>0) & (target_points[:,0]<depth.shape[1]) & (target_points[:,1]<depth.shape[0]))/target_points.shape[0]
+
+def angle_difference(q1:torch.tensor,q2:torch.tensor):
+    mat1 = quat2mat_custom(q1)
+    mat2 = quat2mat_custom(q2)
+    PI = torch.acos(torch.zeros(1).to(device=device)).item() * 2
+    return ((torch.trace(torch.transpose(mat1,0,1)@mat2)-1)/2)*(180/PI)
+
+def quat2mat_custom(q:torch.tensor):
+    w, x, y, z = q
+    Nq = w*w + x*x + y*y + z*z
+    if Nq < 2.220446049250313e-16:
+        return torch.eye(3)
+    s = 2.0/Nq
+    X = x*s
+    Y = y*s
+    Z = z*s
+    wX = w*X; wY = w*Y; wZ = w*Z
+    xX = x*X; xY = x*Y; xZ = x*Z
+    yY = y*Y; yZ = y*Z; zZ = z*Z
+    return torch.tensor(
+           [[ 1.0-(yY+zZ), xY-wZ, xZ+wY ],
+            [ xY+wZ, 1.0-(xX+zZ), yZ-wX ],
+            [ xZ-wY, yZ+wX, 1.0-(xX+yY) ]]).double().to(device=device)

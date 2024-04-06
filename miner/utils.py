@@ -1,10 +1,10 @@
 import torch
 
-from .frustum_angle_diff import FrustumDifferennce, AngleDifference
+from .frustum_angle_diff import frustum_difference, angle_difference
 
 from const import FRUSTUM_THRESHOLD, ANGLE_THRESHOLD
 
-
+device='cuda' if torch.cuda.is_available() else 'cpu'
 def convert_batch_to_scenes(scenes):
   res=[]
   for k in scenes:
@@ -25,17 +25,19 @@ def custom_get_matches_and_diffs(scenes, labels, ref_scenes=None, ref_labels=Non
     else:
         ref_scenes = convert_batch_to_scenes(ref_scenes)
     
-    frustum_diff = torch.tensor([[FrustumDifferennce.get_frustum_difference(anchor,target) for target in scenes] for anchor in ref_scenes])
-    angle_diff = torch.tensor([[AngleDifference.relative_q(anchor["rotation"],target["rotation"]) for target in scenes] for anchor in ref_scenes])
+    frustum_diff = torch.tensor([[frustum_difference(anchor,target) for target in scenes] for anchor in ref_scenes]).to(device=device)
+    angle_diff = torch.tensor([[angle_difference(anchor["rotation"],target["rotation"]) for target in scenes] for anchor in ref_scenes]).to(device=device)
     labels1 = labels.unsqueeze(1)
     labels2 = ref_labels.unsqueeze(0)
     zone_diff = (labels1 == labels2).byte()
-    
-    ind = torch.triu_indices(frustum_diff.size(dim=0), frustum_diff.size(dim=0), 1)
+    ind = torch.triu_indices(frustum_diff.size(dim=0), frustum_diff.size(dim=0), 1).to(device=device)
     frustum_diff[ind[0],ind[1]] = frustum_diff[ind[0],ind[1]] + frustum_diff[ind[1],ind[0]]
     frustum_diff[ind[1],ind[0]] = frustum_diff[ind[0],ind[1]]
-    matches = torch.logical_and(frustum_diff >= frustum_overlap_threshold, angle_diff <= angle_threshold,).byte()
-    matches = torch.logical_and(matches,zone_diff)
+    matches = torch.tensor((frustum_diff >= frustum_overlap_threshold) & (angle_diff <= angle_threshold) & zone_diff).byte()
+    print(f"Frustum Valid Sample: {torch.sum(frustum_diff >= frustum_overlap_threshold)}")
+    print(f"Angle Valid Sample: {torch.sum(angle_diff <= angle_threshold)}")
+    print(f"Label Valid Sample: {torch.sum(zone_diff)}")
+    print(f"Overall Valid Sample: {torch.sum(matches)}")
     diffs = matches ^ 1
     if ref_scenes is scenes:
         matches.fill_diagonal_(0)
