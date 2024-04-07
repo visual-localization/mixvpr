@@ -25,7 +25,9 @@ GSV = {
 
 PITTS_GENERAL = {
     "/pitts250k": "pitts250k_general",
-    "/pitts250k_queries_real": "pitts250k_queries"
+    "/pitts250k_queries_real": "pitts250k_queries",
+    "/pitts250k_queries_depths": "pitts250k_queries_depths",
+    
 }
 def convert_three_digit(input_num:int):
     return str(1000+input_num)[1:]
