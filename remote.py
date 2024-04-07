@@ -1,28 +1,22 @@
-import pathlib
 import modal
 
-stub = modal.Stub(name="MixVPR")
-
-volume = modal.Volume.from_name("sfxl-small")
-
-p = pathlib.Path("")
 
 image = (
     modal.Image.debian_slim(python_version="3.10")
     .apt_install("git")
-    .run_commands("git clone git@github.com:amaralibey/MixVPR.git && cd MixVPR")
-    .run_commands("pip install -r requirements.txt")
+    .run_commands("git clone https://github.com/visual-localization/mixvpr.git")
+    .pip_install_from_requirements("requirements.txt")
+    .workdir("/root/mixvpr")
+)
+
+stub = modal.Stub(
+    image=image,
+    mounts=[modal.Mount.from_local_dir("/LOGS", remote_path="/root/mixvpr/LOGS")],
 )
 
 
-@stub.function(
-    mounts=[
-        modal.Mount.from_local_file(
-            "./LOGS/resnet50_MixVPR_4096_channels(1024)_rows(4).ckpt",
-            remote_path="/LOGS/resnet50_MixVPR_4096_channels(1024)_rows(4).ckpt",
-        )
-    ]
-    volumes={""}
-)
-def main():
-    pass
+@stub.local_entrypoint()
+def entry():
+    from main import main
+
+    main()
