@@ -148,7 +148,7 @@ def entry():
         num_sanity_val_steps=0,  # runs a validation step before stating training
         precision=16,  # we use half precision to reduce  memory usage
         # TODO: CHange this in the future to normal epoch
-        max_epochs=10,
+        max_epochs=15,
         check_val_every_n_epoch=1,  # run validation every epoch
         callbacks=[
             checkpoint_cb,
