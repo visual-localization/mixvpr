@@ -49,10 +49,10 @@ def entry():
     from dataloaders.GSVCitiesDataloader import GSVCitiesDataModule
     from main import VPRModel
     
-    seed_everything(2011744,workers=True)
+    seed_everything(9012,workers=True)
     datamodule = GSVCitiesDataModule(
-        batch_size=16,
-        img_per_place=32,
+        batch_size=32,
+        img_per_place=16,
         min_img_per_place=32,
         shuffle_all=False,  # shuffle all images or keep shuffling in-city only
         random_sample_from_each_place=True,

@@ -32,7 +32,11 @@ def convert_three_digit(input_num:int):
 PITTS_IMAGES = {
     f"/pitts250k_images_{convert_three_digit(num)}":f"pitts250k_images_{convert_three_digit(num)}" for num in range(11)
 }
+PITTS_DEPTHS = {
+    f"/pitts250k_depths_{convert_three_digit(num)}":f"pitts250k_depths_{convert_three_digit(num)}" for num in range(11)
+}
 PITTS = {
     **PITTS_IMAGES,
-    **PITTS_GENERAL
+    **PITTS_GENERAL,
+    **PITTS_DEPTHS
 }

@@ -170,7 +170,7 @@ class WholeDatasetFromStruct(data.Dataset):
         return K,W,H
 
 
-    def generate_depth_path(img_path:str)->str:
+    def generate_depth_path(self,img_path:str)->str:
         if 'queries' in str(img_path):
             depth_path=img_path.replace("queries","queries_depth")[:-4]
         else:
