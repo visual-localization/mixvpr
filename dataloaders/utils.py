@@ -19,7 +19,7 @@ def correct_intrinsic_scale(K, scale_x, scale_y):
     Source: https://dsp.stackexchange.com/questions/6055/how-does-resizing-an-image-affect-the-intrinsic-camera-matrix
     '''
 
-    transform = np.eye(3)
+    transform = torch.eye(3).float()
     transform[0, 0] = scale_x
     transform[0, 2] = scale_x / 2 - 0.5
     transform[1, 1] = scale_y

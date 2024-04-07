@@ -11,7 +11,7 @@ def lookup_volume(data_dict:Dict[str,str]):
     return dict((k, Volume.lookup(v)) for k, v in data_dict.items())
     
 stub = Stub(
-    name="Im trying my best :((("
+    name="More Checkpoint"
 )
 
 image = (
@@ -32,8 +32,9 @@ vol_dict = {
     mounts=[Mount.from_local_dir("./", remote_path="/root/mixvpr")],
     volumes=lookup_volume(vol_dict),
     _allow_background_volume_commits = True,
-    gpu='a10g',
-    timeout=86400
+    gpu=gpu.A100(size="40GB"),
+    timeout=86400,
+    retries=0
 )
 def entry():
     import sys
@@ -48,11 +49,11 @@ def entry():
     from dataloaders.GSVCitiesDataloader import GSVCitiesDataModule
     from main import VPRModel
     
-    seed_everything(2011015,workers=True)
+    seed_everything(2011744,workers=True)
     datamodule = GSVCitiesDataModule(
-        batch_size=10,
-        img_per_place=8,
-        min_img_per_place=16,
+        batch_size=16,
+        img_per_place=32,
+        min_img_per_place=32,
         shuffle_all=False,  # shuffle all images or keep shuffling in-city only
         random_sample_from_each_place=True,
         image_size=(320, 320),
@@ -94,10 +95,10 @@ def entry():
             "mix_depth": 4,
             "mlp_ratio": 1,
             "out_rows": 4,
-            "layers_to_freeze":1
+            "layers_to_freeze":2
         },  # the output dim will be (out_rows * out_channels)
         # ---- Train hyperparameters
-        lr=0.01,  # 0.0002 for adam, 0.05 or sgd (needs to change according to batch size)
+        lr=0.1,  # 0.0002 for adam, 0.05 or sgd (needs to change according to batch size)
         optimizer="sgd",  # sgd, adamw
         weight_decay=0.001,  # 0.001 for sgd and 0 for adam,
         momentum=0.9,
@@ -111,21 +112,31 @@ def entry():
         miner_name="CustomMultiSimilarityMiner",  # example: TripletMarginMiner, MultiSimilarityMiner, PairMarginMiner
         miner_margin=0.1,
         faiss_gpu=False,
+        alpha = 0.4 ## Only For CustomMultiSimilarityMiner
     )
 
     # model params saving using Pytorch Lightning
     # we save the best 3 models accoring to Recall@1 on pittsburg val
     checkpoint_cb = ModelCheckpoint(
-        dirpath="/root/LOGS",
+        dirpath="/root/LOGS/iter_checkpoint/best",
         monitor="pitts30k_val/R1",
         filename=f"{model.encoder_arch}"
-        + "_epoch({epoch:02d})_step({step:04d})_R1[{pitts30k_val/R1:.4f}]_R5[{pitts30k_val/R5:.4f}]",
+        + "_epoch({epoch:02d})_step({step:04d})_R1[{pitts30k_val/R1:.4f}]_R5[{pitts30k_val/R5:.4f}]_OverlapR1[{pitts30k_overlap/R1:.4f}]_OverlapR5[{pitts30k_overlap/R5:.4f}]",
         auto_insert_metric_name=False,
         save_weights_only=True,
         save_top_k=3,
         mode="max",
     )
-
+    checkpoint_overlap = ModelCheckpoint(
+        dirpath="/root/LOGS/iter_checkpoint/iter_checkpoint",
+        monitor="pitts30k_overlap/R1",
+        filename=f"{model.encoder_arch}"
+        + "_epoch({epoch:02d})_step({step:04d})_R1[{pitts30k_val/R1:.4f}]_R5[{pitts30k_val/R5:.4f}]_OverlapR1[{pitts30k_overlap/R1:.4f}]_OverlapR5[{pitts30k_overlap/R5:.4f}]",
+        auto_insert_metric_name=False,
+        save_weights_only=True,
+        save_top_k=3,
+        mode="max",
+    )
     # ------------------
     # we instanciate a trainer
     csv_logger = log.CSVLogger(save_dir="/root/LOGS")
@@ -137,13 +148,14 @@ def entry():
         num_sanity_val_steps=0,  # runs a validation step before stating training
         precision=16,  # we use half precision to reduce  memory usage
         # TODO: CHange this in the future to normal epoch
-        max_epochs=3,
+        max_epochs=10,
         check_val_every_n_epoch=1,  # run validation every epoch
         callbacks=[
-            checkpoint_cb
+            checkpoint_cb,
+            checkpoint_overlap
         ],  # we only run the checkpointing callback (you can add more)
         reload_dataloaders_every_n_epochs=1,  # we reload the dataset to shuffle the order
-        log_every_n_steps=2,
+        log_every_n_steps=20,
         logger=csv_logger
         # fast_dev_run=True # uncomment or dev mode (only runs a one iteration train and validation, no checkpointing).
     )

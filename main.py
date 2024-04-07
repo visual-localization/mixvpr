@@ -39,6 +39,7 @@ class VPRModel(pl.LightningModule):
         miner_name="CustomMultiSimilarityMiner",
         miner_margin=0.1,
         faiss_gpu=False,
+        alpha = None # used to control the proportion of CustomMultiSimilarityMiner
     ):
         super().__init__()
         self.encoder_arch = backbone_arch
@@ -65,6 +66,10 @@ class VPRModel(pl.LightningModule):
 
         self.loss_fn = utils.get_loss(loss_name)
         self.miner = utils.get_miner(miner_name, miner_margin)
+        if miner_name == "CustomMultiSimilarityMiner":
+            self.miner_control = utils.get_miner("MultiSimilarityMiner", miner_margin)
+            assert type(alpha) is not None, "Please provide alpha for control"
+        self.alpha = alpha
         self.batch_acc = (
             []
         )  # we will keep track of the % of trivial pairs/triplets at the loss level
@@ -141,7 +146,12 @@ class VPRModel(pl.LightningModule):
                     scenes = scenes,
                     labels = labels
                 )
-                loss = self.loss_fn(descriptors, indices_tuple = miner_outputs)
+                loss_frustum = self.loss_fn(descriptors, indices_tuple = miner_outputs)
+                
+                miner_outputs_control = self.miner_control(descriptors, labels)
+                loss_control = self.loss_fn(descriptors, labels, miner_outputs_control)
+                
+                loss = self.alpha*loss_frustum + (1-self.alpha)*loss_control
             else:
                 miner_outputs = self.miner(descriptors, labels)
                 loss = self.loss_fn(descriptors, labels, miner_outputs)
@@ -248,18 +258,24 @@ class VPRModel(pl.LightningModule):
 
             r_list = feats[:num_references]
             q_list = feats[num_references:]
-            pitts_dict = utils.get_validation_recalls(
+            pitts_dict,frustum_overlap_dict = utils.get_validation_recalls(
                 r_list=r_list,
                 q_list=q_list,
                 k_values=[1, 5, 10, 15, 20, 50, 100],
+                frustum_k_vals = 2,
                 gt=positives,
                 print_results=True,
                 dataset_name=val_set_name,
                 faiss_gpu=self.faiss_gpu,
+                dataset = val_dataset,
+                num_references=num_references
             )
             del r_list, q_list, feats, num_references, positives
 
             self.log(f"{val_set_name}/R1", pitts_dict[1], prog_bar=False, logger=True)
             self.log(f"{val_set_name}/R5", pitts_dict[5], prog_bar=False, logger=True)
             self.log(f"{val_set_name}/R10", pitts_dict[10], prog_bar=False, logger=True)
+            
+            self.log(f"{val_set_name}_overlap/R1", frustum_overlap_dict[1], prog_bar=False, logger=True)
+            self.log(f"{val_set_name}_overlap/R5", frustum_overlap_dict[5], prog_bar=False, logger=True)
         print("\n\n")
