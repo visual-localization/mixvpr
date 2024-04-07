@@ -1,43 +1,39 @@
-from modal import Stub, Volume,Image,Mount,gpu
+from modal import Stub, Volume, Image, Mount, gpu
 
 from typing import Dict
 import os
 
-from const import PITTS,GSV
+from const import PITTS, GSV
 
 
-
-def lookup_volume(data_dict:Dict[str,str]):
+def lookup_volume(data_dict: Dict[str, str]):
     return dict((k, Volume.lookup(v)) for k, v in data_dict.items())
-    
-stub = Stub(
-    name="More Checkpoint"
-)
+
+
+stub = Stub(name="More Checkpoint")
 
 image = (
     Image.debian_slim(python_version="3.10")
-    .apt_install(["ffmpeg","libsm6","libxext6"])
+    .apt_install(["ffmpeg", "libsm6", "libxext6"])
     .pip_install_from_requirements("./requirements.txt")
 )
 
 
-vol_dict = {
-    **GSV,
-    **PITTS,
-    "/root/LOGS": "MixVPR_LOGS"
-}
+vol_dict = {**GSV, **PITTS, "/root/LOGS": "MixVPR_LOGS"}
+
 
 @stub.function(
     image=image,
     mounts=[Mount.from_local_dir("./", remote_path="/root/mixvpr")],
     volumes=lookup_volume(vol_dict),
-    _allow_background_volume_commits = True,
+    _allow_background_volume_commits=True,
     gpu=gpu.A100(size="40GB"),
     timeout=86400,
-    retries=0
+    retries=0,
 )
 def entry():
     import sys
+
     sys.path.append("/root/mixvpr")
 
     import pytorch_lightning as pl
@@ -45,11 +41,11 @@ def entry():
     from lightning_lite.utilities.seed import seed_everything
     import pytorch_lightning.loggers as log
     import torch
-    
+
     from dataloaders.GSVCitiesDataloader import GSVCitiesDataModule
     from main import VPRModel
-    
-    seed_everything(9012,workers=True)
+
+    seed_everything(9012, workers=True)
     datamodule = GSVCitiesDataModule(
         batch_size=32,
         img_per_place=16,
@@ -62,7 +58,7 @@ def entry():
         val_set_names=[
             "pitts30k_val",
             "pitts30k_test",
-            #"msls_val",
+            # "msls_val",
         ],  # pitts30k_val, pitts30k_test, msls_val
     )
 
@@ -95,7 +91,7 @@ def entry():
             "mix_depth": 4,
             "mlp_ratio": 1,
             "out_rows": 4,
-            "layers_to_freeze":2
+            "layers_to_freeze": 2,
         },  # the output dim will be (out_rows * out_channels)
         # ---- Train hyperparameters
         lr=0.1,  # 0.0002 for adam, 0.05 or sgd (needs to change according to batch size)
@@ -112,7 +108,7 @@ def entry():
         miner_name="CustomMultiSimilarityMiner",  # example: TripletMarginMiner, MultiSimilarityMiner, PairMarginMiner
         miner_margin=0.1,
         faiss_gpu=False,
-        alpha = 0.4 ## Only For CustomMultiSimilarityMiner
+        alpha=0.4,  ## Only For CustomMultiSimilarityMiner
     )
 
     # model params saving using Pytorch Lightning
@@ -140,31 +136,30 @@ def entry():
     # ------------------
     # we instanciate a trainer
     csv_logger = log.CSVLogger(save_dir="/root/LOGS")
-    
+
     trainer = pl.Trainer(
         accelerator="gpu",
         devices=[0],
         default_root_dir=f"/root/LOGS/",  # Tensorflow can be used to viz
-        num_sanity_val_steps=0,  # runs a validation step before stating training
+        num_sanity_val_steps=1,  # runs a validation step before stating training
         precision=16,  # we use half precision to reduce  memory usage
         # TODO: CHange this in the future to normal epoch
         max_epochs=15,
         check_val_every_n_epoch=1,  # run validation every epoch
         callbacks=[
             checkpoint_cb,
-            checkpoint_overlap
+            checkpoint_overlap,
         ],  # we only run the checkpointing callback (you can add more)
         reload_dataloaders_every_n_epochs=1,  # we reload the dataset to shuffle the order
         log_every_n_steps=20,
-        logger=csv_logger
+        logger=csv_logger,
         # fast_dev_run=True # uncomment or dev mode (only runs a one iteration train and validation, no checkpointing).
     )
 
-
     # we load the pretrained model for finetuning
-    device='cuda' if torch.cuda.is_available() else 'cpu'
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     ckpt_path = "/root/LOGS/init.ckpt"
-    
+
     state_dict = torch.load(ckpt_path, map_location=torch.device(device))
     model.load_state_dict(state_dict)
     model.to(device)
