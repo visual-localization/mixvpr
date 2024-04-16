@@ -182,7 +182,7 @@ class WholeDatasetFromStruct(data.Dataset):
         Read the intrinsics of a specific image, according to its name
         """
         fx, fy, cx, cy, W, H = 768.000, 768.000, 320, 240, 648, 480
-        K = torch.tensor([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float32)
+        K = torch.tensor([[fx, 0, cx], [0, fy, cy], [0, 0, 1]]).float()
         if resize is not None:
             K = correct_intrinsic_scale(K, resize[0] / W, resize[1] / H)
         return K, W, H
@@ -227,7 +227,7 @@ class WholeDatasetFromStruct(data.Dataset):
 
         depth_path = self.generate_depth_path(img_path)
         depth = read_depth_image(depth_path, self.image_size)
-        intrinsics_matrix = self.read_intrinsics(self.images[index], self.image_size)
+        intrinsics_matrix,_,_ = self.read_intrinsics(self.images_name[index], self.image_size)
         q, t = self.poses[img_name]
         return Scene.create_dict(img, depth, intrinsics_matrix, q, t), index
 

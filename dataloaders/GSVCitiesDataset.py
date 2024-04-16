@@ -196,7 +196,6 @@ class GSVCitiesDataset(Dataset):
         K = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]], dtype=np.float32)
         if img_size is not None:
             K = correct_intrinsic_scale(K, img_size[0] / W, img_size[1] / H)
-        K=torch.tensor(K)
         return K,W,H
     
     def setup_intrinsics(self):

@@ -37,7 +37,7 @@ def get_validation_recalls(r_list, q_list, k_values,frustum_k_vals, gt, print_re
                     if(i<frustum_k_vals):
                         db_idxes = pred[:n][filter]
                         q_idx += num_references
-                        max_frustum = max([(frustum_difference(dataset[db_idx],dataset[q_idx]) + frustum_difference(dataset[q_idx],dataset[db_idx]))/2 for db_idx in db_idxes])
+                        max_frustum = max([(frustum_difference(dataset[db_idx][0],dataset[q_idx][0]).item() + frustum_difference(dataset[q_idx][0],dataset[db_idx][0]).item())/2 for db_idx in db_idxes])
                         frustum_at_k[i:] += max_frustum
                     correct_at_k[i:] += 1
                     break

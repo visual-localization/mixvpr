@@ -1,8 +1,19 @@
 import torch
+from typing import Dict
 
 from typing import Tuple
+
 device='cuda' if torch.cuda.is_available() else 'cpu'
+
+
+def set_device_tensor(img:Dict[str,torch.Tensor]):
+    return {
+        key:value.to(device) if value.get_device()==-1 else value for key,value in img.items()
+    }
+
 def frustum_difference(origin_img,target_img)->float:
+    origin_img = set_device_tensor(origin_img)
+    target_img = set_device_tensor(target_img)
     
     intrinsics_matrix = origin_img["intrinsics_matrix"].double()
     inv_intrinsics = torch.inverse(intrinsics_matrix)
