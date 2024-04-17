@@ -54,7 +54,9 @@ def angle_difference(q1:torch.tensor,q2:torch.tensor):
     mat1 = quat2mat_custom(q1)
     mat2 = quat2mat_custom(q2)
     PI = torch.acos(torch.zeros(1).to(device=device)).item() * 2
-    return ((torch.trace(torch.transpose(mat1,0,1)@mat2)-1)/2)*(180/PI)
+    trace = (torch.trace(torch.transpose(mat1,0,1)@mat2)-1)/2
+    trace = torch.min(trace,torch.tensor(1)) if trace.item()>0 else torch.max(trace,torch.tensor(-1))
+    return torch.acos(trace)*(180/PI)
 
 def quat2mat_custom(q:torch.tensor):
     w, x, y, z = q

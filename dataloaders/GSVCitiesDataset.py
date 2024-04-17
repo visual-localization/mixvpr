@@ -183,7 +183,8 @@ class GSVCitiesDataset(Dataset):
         rotation_vector = [0,northdeg,0]
         rot = Rotation.from_euler('xyz',rotation_vector , degrees=True)
         quat = rot.as_quat()
-        return torch.tensor(quat), torch.tensor(trans)
+        final_quat = np.roll(quat,1)
+        return torch.tensor(final_quat), torch.tensor(trans)
         
     
     def read_intrinsics(self, img_name: str, img_size=None,width=0,height=0):
