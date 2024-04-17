@@ -15,17 +15,35 @@ from typing import Dict, Tuple
 from .Scene import Scene
 from .utils import read_depth_image, correct_intrinsic_scale
 
-root_dir = "/pitts250k"
+root_dir = "/kaggle/input/pittsburgh250k"
 
 if not exists(root_dir):
     raise FileNotFoundError(
         "root_dir is hardcoded, please adjust to point to Pittsburgh dataset"
     )
 
-struct_dir = join(root_dir, "datasets")
-queries_dir = f"{root_dir}_queries_real"
-pose_dir = join(root_dir, "poses")
+struct_dir = join(root_dir,"netvlad_v100_datasets","datasets")
+queries_dir = join(root_dir,"queries_real","queries_real")
+pose_dir = "/kaggle/input/utils-pitts250k-gsv"
 
+DEPTH_1 = "/kaggle/input/pitts-depth-zip"
+DEPTH_2 = "/kaggle/input/pitts-depth-zip-2"
+
+AREA_1 = [
+    "000",
+    "001",
+    "002",
+    "003",
+    "004",
+    "005"
+]
+AREA_2 = [
+    "006",
+    "007",
+    "008",
+    "009",
+    "010"
+]
 
 def default_input_transform(image_size=None):
     return T.Compose(
@@ -131,14 +149,7 @@ def parse_dbStruct(path):
 
 def join_db_img(root_dir, dbIm):
     [folder, name] = dbIm.split("/")  # 003/0003313
-
-    img_parts = name[:-4].split("_")
-    split_info = int(img_parts[0]) - int(folder) * 1000
-
-    new_index = int(split_info / 250)
-    new_folder = f"00{new_index}"  # 000/001/002/003
-    new_path = os.path.join(f"{root_dir}_images_{str(folder)}", new_folder, name)
-    return new_path
+    return join(root_dir,folder,folder,name)
 
 
 def alt_convert_zxy(point_xyz):
@@ -186,12 +197,20 @@ class WholeDatasetFromStruct(data.Dataset):
         if resize is not None:
             K = correct_intrinsic_scale(K, resize[0] / W, resize[1] / H)
         return K, W, H
-
+    
     def generate_depth_path(self, img_path: str) -> str:
         if "queries" in str(img_path):
-            depth_path = img_path.replace("queries_real", "queries_depths")[:-4]
+            name = img_path.split("/")[-2:]
+            depth_path = join("/kaggle/input/pdqueries/pittest/pitts/queries_real",*name)[:-4]
         else:
-            depth_path = img_path.replace("images", "depths")[:-4]
+            [folder,name] = img_path.split("/")[-2:]
+            img_parts = name[:-4].split("_")
+            split_info = int(img_parts[0]) - int(folder) * 1000
+
+            new_index = int(split_info / 250)
+            new_folder = f"00{new_index}"  # 000/001/002/003
+                 
+            depth_path = os.path.join(DEPTH_1 if int(folder)<=5 else DEPTH_2, folder, folder, new_folder, name)[:-4]
         return depth_path + ".png"
 
     @staticmethod

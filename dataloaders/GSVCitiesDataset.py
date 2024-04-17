@@ -20,12 +20,43 @@ default_transform = T.Compose([
     T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
-# NOTE: Hard coded path to dataset folder 
-BASE_PATH = '/gsv_cities'
+DEPTH_1 = "/kaggle/input/gsv-depths-1"
+CITY_1 = [
+    "Bangkok",
+    "Barcelona",
+    "Boston",
+    "Brussels",
+    "BuenosAires",
+    "Chicago",
+    "Lisbon",
+    "London",
+    "LosAngeles",
+    "Madrid",
+    "Medellin",
+    "Melbourne"
+]
 
-# if not Path(BASE_PATH).exists():
-#     raise FileNotFoundError(
-#         'BASE_PATH is hardcoded, please adjust to point to gsv_cities')
+DEPTH_2 = "/kaggle/input/gsv-depths-2"
+CITY_2 = [
+    "MexicoCity",
+    "Miami",
+    "Minneapolis",
+    "OSL",
+    "Osaka",
+    "PRG",
+    "PRS",
+    "Phoenix",
+    "Rome",
+    "TRT",
+    "WashingtonDC"
+]
+
+# NOTE: Hard coded path to dataset folder 
+BASE_PATH = '/kaggle/input/gsv-cities'
+
+if not Path(BASE_PATH).exists():
+    raise FileNotFoundError(
+        'BASE_PATH is hardcoded, please adjust to point to gsv_cities')
 
 class GSVCitiesDataset(Dataset):
     def __init__(self,
@@ -112,7 +143,7 @@ class GSVCitiesDataset(Dataset):
         scenes = []
         for i, row in place.iterrows():
             img_name = self.get_img_name(row)
-            img_path = os.path.join(f"{self.base_path}_Images_{row['city_id']}",img_name)
+            img_path = os.path.join(self.base_path,"Images",row['city_id'],img_name)
             scene = self.proccess_image_from_name(img_name,img_path)
             scenes.append(scene)
 
@@ -168,8 +199,13 @@ class GSVCitiesDataset(Dataset):
         return name
     
     @staticmethod
-    def generate_depth_path(base_path:str,img_path:str):
-        return img_path.replace("Images","Depths").replace(".jpg",".png")
+    def generate_depth_path(img_name:str):
+        #/kaggle/input/gsv-cities/Images/Bangkok/
+        #/kaggle/input/gsv-depths-1/Bangkok/Bangkok/Bangkok_0000001_2016_11_228_13.71541995884607_100.4848799365689_8hQkYBLClYeLNAEhsfdSFw.png
+        
+        city = img_name.split("_")[0]
+        depth_root = DEPTH_1 if city in CITY_1 else DEPTH_2
+        return os.path.join(depth_root,city,city,img_name).replace(".jpg",".png")
     
     @staticmethod
     def read_poses(name:str):
@@ -183,7 +219,8 @@ class GSVCitiesDataset(Dataset):
         rotation_vector = [0,northdeg,0]
         rot = Rotation.from_euler('xyz',rotation_vector , degrees=True)
         quat = rot.as_quat()
-        return torch.tensor(quat), torch.tensor(trans)
+        final_quat = np.roll(quat,1)
+        return torch.tensor(final_quat), torch.tensor(trans)
         
     
     def read_intrinsics(self, img_name: str, img_size=None,width=0,height=0):
@@ -200,7 +237,7 @@ class GSVCitiesDataset(Dataset):
     
     def setup_intrinsics(self):
         intrinsics = {}
-        txt_path = os.path.join(self.base_path,"intrinsics.txt")
+        txt_path = os.path.join("/kaggle/input/utils-pitts250k-gsv/intrinsics.txt")
         with open(txt_path,"r") as f:
             for line in f.readlines():
                 line_split = line.strip().split(" ")
@@ -215,8 +252,15 @@ class GSVCitiesDataset(Dataset):
             img = self.transform(img)
         
         # Load depth
-        depth_path = self.generate_depth_path(self.base_path,img_path)
-        depth = read_depth_image(depth_path,self.img_size)
+        depth_path = self.generate_depth_path(img_name)
+        try:
+            depth = read_depth_image(depth_path,self.img_size)
+        except:
+            print(f"Debugging: ....")
+            print(f"Image Path: {img_path}")
+            print(f"Image Name: {img_name}")
+            print(f"Depth Path: {depth_path}")
+            depth=[]
         
         # Load poses from name
         q,t = self.read_poses(img_name)
