@@ -30,6 +30,7 @@ def transform(img_path, resize):
 
 
 class Scene:
+    name:str
     image: torch.tensor # (ch,h,w)
     depth: torch.tensor # (h,w)
     intrinsics_matrix: torch.tensor #(3,3)
@@ -38,6 +39,7 @@ class Scene:
     
     @staticmethod
     def create_dict(
+        name:str,
         image:torch.tensor, # (h, w, 3) in cpu
         depth:torch.tensor,
         intrinsics_matrix: torch.tensor,
@@ -45,6 +47,7 @@ class Scene:
         translation: torch.tensor
     ):
         return{
+            "name": name,
             "image": image,
             "depth": depth,
             "intrinsics_matrix":intrinsics_matrix,

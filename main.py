@@ -6,6 +6,7 @@ import utils
 
 from dataloaders.GSVCitiesDataloader import GSVCitiesDataModule
 from models import helper
+from functools import reduce
 
 
 class VPRModel(pl.LightningModule):
@@ -152,6 +153,8 @@ class VPRModel(pl.LightningModule):
                 loss_control = self.loss_fn(descriptors, labels, miner_outputs_control)
                 
                 loss = self.alpha*loss_frustum + (1-self.alpha)*loss_control
+                self.log(f"Frustum_Loss", loss_frustum.item(), prog_bar=True, logger=True)
+                self.log(f"MultiSim_Loss", loss_control.item(), prog_bar=True, logger=True)
             else:
                 miner_outputs = self.miner(descriptors, labels)
                 loss = self.loss_fn(descriptors, labels, miner_outputs)
@@ -189,7 +192,7 @@ class VPRModel(pl.LightningModule):
         scenes, labels = batch
 
         for k in scenes:
-            scenes[k] = scenes[k].flatten(0,1)
+            scenes[k] = scenes[k].flatten(0,1) if k!="name" else list(reduce(lambda arr,item:arr+item,scenes[k],[]))
         # Note that GSVCities yields places (each containing N images)
         # which means the dataloader will return a batch containing BS places
         # BS, K, ch, h, w = scenes["image"].shape

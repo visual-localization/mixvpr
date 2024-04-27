@@ -1,5 +1,5 @@
-FRUSTUM_THRESHOLD = 1.2
-ANGLE_THRESHOLD = 75
+FRUSTUM_THRESHOLD = 1.5
+ANGLE_THRESHOLD = 50
 
 CITIES = [
     'Bangkok', 'Barcelona', 'Boston', 'Brussels', 'BuenosAires',

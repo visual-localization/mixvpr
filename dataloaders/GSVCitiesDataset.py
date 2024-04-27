@@ -147,7 +147,7 @@ class GSVCitiesDataset(Dataset):
             scene = self.proccess_image_from_name(img_name,img_path)
             scenes.append(scene)
 
-        scenes = {k: torch.stack([dic[k] for dic in scenes]) for k in scenes[0]}
+        scenes = {k: torch.stack([dic[k] for dic in scenes]) if k!="name" else [dic[k] for dic in scenes] for k in scenes[0]}
 
         # NOTE: contrary to image classification where __getitem__ returns only one image 
         # in GSVCities, we return a place, which is a Tesor of K images (K=self.img_per_place)
@@ -268,6 +268,7 @@ class GSVCitiesDataset(Dataset):
         # Load intrinsics matrix
         intrinsics_matrix,_,_ = self.read_intrinsics(img_name,self.img_size,W,H)
         return Scene.create_dict(
+            img_name,
             img,depth,
             intrinsics_matrix,
             q,t
