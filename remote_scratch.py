@@ -10,7 +10,7 @@ def lookup_volume(data_dict: Dict[str, str]):
     return dict((k, Volume.lookup(v)) for k, v in data_dict.items())
 
 
-stub = Stub(name="More Checkpoint")
+stub = Stub(name="Scratch Training")
 
 image = (
     Image.debian_slim(python_version="3.10")
@@ -19,7 +19,7 @@ image = (
 )
 
 
-vol_dict = {**GSV, **PITTS, "/root/LOGS": "Scratch_LOGS"}
+vol_dict = {**GSV, **PITTS, "/root/LOGS": "Scratch_Training"}
 
 
 @stub.function(
@@ -47,9 +47,9 @@ def entry():
 
     seed_everything(9012, workers=True)
     datamodule = GSVCitiesDataModule(
-        batch_size=16,
-        img_per_place=16,
-        min_img_per_place=32,
+        batch_size=32,
+        img_per_place=8,
+        min_img_per_place=16,
         shuffle_all=False,  # shuffle all images or keep shuffling in-city only
         random_sample_from_each_place=True,
         image_size=(320, 320),
@@ -71,7 +71,7 @@ def entry():
         # ---- Encoder
         backbone_arch="resnet50",
         pretrained=True,
-        layers_to_freeze=3,
+        layers_to_freeze=2,
         layers_to_crop=[4],  # 4 crops the last resnet layer, 3 crops the 3rd, ...etc
         # ---- Aggregator
         # agg_arch='CosPlace',
@@ -94,9 +94,9 @@ def entry():
             "layers_to_freeze": 0,
         },  # the output dim will be (out_rows * out_channels)
         # ---- Train hyperparameters
-        lr=0.1,  # 0.0002 for adam, 0.05 or sgd (needs to change according to batch size)
-        optimizer="sgd",  # sgd, adamw
-        weight_decay=0.001,  # 0.001 for sgd and 0 for adam,
+        lr=0.0002,  # 0.0002 for adam, 0.05 or sgd (needs to change according to batch size)
+        optimizer="adamw",  # sgd, adamw
+        weight_decay=0,  # 0.001 for sgd and 0 for adam,
         momentum=0.9,
         warmpup_steps=650,
         milestones=[5, 10, 15, 25, 45],
@@ -108,7 +108,7 @@ def entry():
         miner_name="CustomMultiSimilarityMiner",  # example: TripletMarginMiner, MultiSimilarityMiner, PairMarginMiner
         miner_margin=0.1,
         faiss_gpu=False,
-        alpha=0.4,  ## Only For CustomMultiSimilarityMiner
+        alpha=0.3,  ## Only For CustomMultiSimilarityMiner
     )
 
     # model params saving using Pytorch Lightning
@@ -117,17 +117,17 @@ def entry():
         dirpath="/root/LOGS/iter_checkpoint/best",
         monitor="pitts30k_val/R1",
         filename=f"{model.encoder_arch}"
-        + "_epoch({epoch:02d})_step({step:04d})_R1[{pitts30k_val/R1:.4f}]_R5[{pitts30k_val/R5:.4f}]_OverlapR1[{pitts30k_overlap/R1:.4f}]_OverlapR5[{pitts30k_overlap/R5:.4f}]",
+        + "_epoch({epoch:02d})_step({step:04d})_R1[{pitts30k_val/R1:.4f}]_R5[{pitts30k_val/R5:.4f}]_OverlapR1[{pitts30k_val_overlap/R1:.4f}]_OverlapR5[{pitts30k_val_overlap/R5:.4f}]",
         auto_insert_metric_name=False,
         save_weights_only=True,
         save_top_k=10,
         mode="max",
     )
     checkpoint_overlap = ModelCheckpoint(
-        dirpath="/root/LOGS/iter_checkpoint/iter_checkpoint",
-        monitor="pitts30k_overlap/R1",
+        dirpath="/root/LOGS/iter_checkpoint/best_overlap",
+        monitor="pitts30k_val_overlap/R1",
         filename=f"{model.encoder_arch}"
-        + "_epoch({epoch:02d})_step({step:04d})_R1[{pitts30k_val/R1:.4f}]_R5[{pitts30k_val/R5:.4f}]_OverlapR1[{pitts30k_overlap/R1:.4f}]_OverlapR5[{pitts30k_overlap/R5:.4f}]",
+        + "_epoch({epoch:02d})_step({step:04d})_R1[{pitts30k_val/R1:.4f}]_R5[{pitts30k_val/R5:.4f}]_OverlapR1[{pitts30k_val_overlap/R1:.4f}]_OverlapR5[{pitts30k_val_overlap/R5:.4f}]",
         auto_insert_metric_name=False,
         save_weights_only=True,
         save_top_k=10,
@@ -144,14 +144,14 @@ def entry():
         num_sanity_val_steps=0,  # runs a validation step before stating training
         precision=16,  # we use half precision to reduce  memory usage
         # TODO: CHange this in the future to normal epoch
-        max_epochs=15,
+        max_epochs=10,
         check_val_every_n_epoch=1,  # run validation every epoch
         callbacks=[
             checkpoint_cb,
             checkpoint_overlap,
         ],  # we only run the checkpointing callback (you can add more)
         reload_dataloaders_every_n_epochs=1,  # we reload the dataset to shuffle the order
-        log_every_n_steps=20,
+        log_every_n_steps=10,
         logger=csv_logger,
         # fast_dev_run=True # uncomment or dev mode (only runs a one iteration train and validation, no checkpointing).
     )

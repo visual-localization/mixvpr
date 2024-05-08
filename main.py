@@ -152,6 +152,8 @@ class VPRModel(pl.LightningModule):
                 loss_control = self.loss_fn(descriptors, labels, miner_outputs_control)
                 
                 loss = self.alpha*loss_frustum + (1-self.alpha)*loss_control
+                self.log("Frustum_Loss", loss_frustum, prog_bar=True, logger=True)
+                self.log("Control_Loss", loss_control, prog_bar=True, logger=True)
             else:
                 miner_outputs = self.miner(descriptors, labels)
                 loss = self.loss_fn(descriptors, labels, miner_outputs)
